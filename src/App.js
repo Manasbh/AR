@@ -8,6 +8,15 @@ const ARScene = () => {
   const objectPlacedRef = useRef(false); // Reference to track if the object has been placed
   let scene, camera, renderer, model, reticle, placedObject, hitTestSourceRequested = false, hitTestSource = null;
 
+  const onSessionStart = (event) => {
+    // Do something when the AR session starts
+  };
+
+  // Function to handle AR session end
+  const onSessionEnd = (event) => {
+    // Do something when the AR session ends
+  };
+  
   useEffect(() => {
     const setupScene = async () => {
       // Set up the scene
@@ -91,15 +100,6 @@ const ARScene = () => {
     };
   }, []);
 
-  // Function to handle AR session start
-  const onSessionStart = (event) => {
-    // Do something when the AR session starts
-  };
-
-  // Function to handle AR session end
-  const onSessionEnd = (event) => {
-    // Do something when the AR session ends
-  };
 
   // Function to handle object placement on tap
   const onSelect = (event) => {
