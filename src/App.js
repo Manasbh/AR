@@ -91,24 +91,45 @@ const ARScene = () => {
     };
   }, []);
 
-  // Get the hit test source
-  const requestHitTestSource = () => {
-    const session = renderer.xr.getSession();
-    if (session) {
-      session.requestReferenceSpace('viewer').then(function (referenceSpace) {
-        session.requestHitTestSource({ space: referenceSpace }).then(function (source) {
-          hitTestSource = source;
-        });
-      });
-      session.addEventListener('end', function () {
-        hitTestSourceRequested = false;
-        hitTestSource = null;
-      });
-      hitTestSourceRequested = true;
+  // Function to handle AR session start
+  const onSessionStart = (event) => {
+    // Do something when the AR session starts
+  };
+
+  // Function to handle AR session end
+  const onSessionEnd = (event) => {
+    // Do something when the AR session ends
+  };
+
+  // Function to handle object placement on tap
+  const onSelect = (event) => {
+    if (reticle.visible && !objectPlacedRef.current) {
+      placedObject = model.clone(); // Clone the model to place it
+      placedObject.position.copy(reticle.position); // Set object position to the reticle's position
+      scene.add(placedObject); // Add the object to the scene
+      objectPlacedRef.current = true; // Update the reference to indicate object placement
     }
   };
 
-  // Update the reticle position based on hit test results
+  // Function to request hit test source
+  const requestHitTestSource = () => {
+    const session = renderer.xr.getSession();
+
+    session.requestReferenceSpace('viewer').then(function (referenceSpace) {
+      session.requestHitTestSource({ space: referenceSpace }).then(function (source) {
+        hitTestSource = source;
+      });
+    });
+
+    session.addEventListener('end', function () {
+      hitTestSourceRequested = false;
+      hitTestSource = null;
+    });
+
+    hitTestSourceRequested = true;
+  };
+
+  // Function to get hit test results
   const getHitTestResults = (frame) => {
     const hitTestResults = frame.getHitTestResults(hitTestSource);
 
@@ -119,20 +140,8 @@ const ARScene = () => {
 
       reticle.visible = true;
       reticle.matrix.fromArray(pose.transform.matrix);
-      reticle.updateMatrixWorld();
     } else {
       reticle.visible = false;
-    }
-  };
-
-  // Handle object placement on tap
-  const onSelect = (event) => {
-    if (reticle.visible && !objectPlacedRef.current) {
-      placedObject = model.clone();
-      placedObject.position.copy(reticle.position);
-      placedObject.visible = true;
-      scene.add(placedObject);
-      objectPlacedRef.current = true;
     }
   };
 
