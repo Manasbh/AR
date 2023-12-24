@@ -6,7 +6,7 @@ import { ARButton } from 'three/examples/jsm/webxr/ARButton';
 const ARScene = () => {
   const canvasRef = useRef(null);
   const objectPlacedRef = useRef(false); // Reference to track if the object has been placed
-  let scene, camera, renderer, model, reticle, placedObject, hitTestSourceRequested = false, hitTestSource = null;
+  let scene, camera, renderer, model, reticle, placedObject, hitTestSource = null;
 
   const onSessionStart = (event) => {
     // Do something when the AR session starts
@@ -16,7 +16,7 @@ const ARScene = () => {
   const onSessionEnd = (event) => {
     // Do something when the AR session ends
   };
-  
+
   useEffect(() => {
     const setupScene = async () => {
       // Set up the scene
@@ -97,10 +97,17 @@ const ARScene = () => {
 
     return () => {
       window.removeEventListener('resize', handleResize);
+
+      // Clean up the hitTestSource event listeners and references
+      const session = renderer.xr.getSession();
+      if (session && hitTestSource) {
+        session.removeEventListener('end', onSessionEnd);
+        hitTestSource.cancel();
+        hitTestSource = null;
+      }
     };
   }, []);
-
-
+  
   // Function to handle object placement on tap
   const onSelect = (event) => {
     if (reticle.visible && !objectPlacedRef.current) {
