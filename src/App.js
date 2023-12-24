@@ -7,6 +7,7 @@ const ARScene = () => {
   const canvasRef = useRef(null);
   const objectPlacedRef = useRef(false); // Reference to track if the object has been placed
   let scene, camera, renderer, model, reticle, placedObject, hitTestSource = null;
+  let hitTestSourceRequested = false;
 
   const onSessionStart = (event) => {
     // Do something when the AR session starts
@@ -107,7 +108,7 @@ const ARScene = () => {
       }
     };
   }, []);
-  
+
   // Function to handle object placement on tap
   const onSelect = (event) => {
     if (reticle.visible && !objectPlacedRef.current) {
