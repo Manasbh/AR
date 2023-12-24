@@ -6,10 +6,9 @@ import { ARButton } from 'three/examples/jsm/webxr/ARButton';
 const ARScene = () => {
   const canvasRef = useRef(null);
   const objectPlacedRef = useRef(false); // Reference to track if the object has been placed
+  let scene, camera, renderer, model, reticle, placedObject, hitTestSourceRequested = false, hitTestSource = null;
 
   useEffect(() => {
-    let scene, camera, renderer, model, reticle, placedObject;
-
     const setupScene = async () => {
       // Set up the scene
       scene = new THREE.Scene();
@@ -31,6 +30,7 @@ const ARScene = () => {
       try {
         const gltf = await loader.loadAsync('/envi1.glb');
         model = gltf.scene;
+        model.visible = false; // Initially hide the model
         scene.add(model);
       } catch (error) {
         console.error('Error loading GLTF model:', error);
@@ -50,30 +50,21 @@ const ARScene = () => {
       renderer.xr.addEventListener('sessionend', onSessionEnd);
       renderer.xr.addEventListener('select', onSelect);
 
-      // Handle session start
-      function onSessionStart(event) {
-        // Do something when the AR session starts
-      }
-
-      // Handle session end
-      function onSessionEnd(event) {
-        // Do something when the AR session ends
-      }
-
-      // Handle object placement on tap
-      function onSelect(event) {
-        if (reticle.visible && !objectPlacedRef.current) {
-          placedObject = model.clone(); // Clone the model to place it
-          placedObject.position.copy(reticle.position); // Set object position to the reticle's position
-          scene.add(placedObject); // Add the object to the scene
-          objectPlacedRef.current = true; // Update the reference to indicate object placement
-        }
-      }
-
       // Set up animation loop
       const animate = () => {
         renderer.setAnimationLoop(() => {
           renderer.render(scene, camera);
+          if (renderer.xr.isPresenting) {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight;
+
+            camera.aspect = newWidth / newHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(newWidth, newHeight);
+          }
+
+          if (hitTestSourceRequested === false) requestHitTestSource();
+          if (hitTestSource) getHitTestResults(renderer.xr.getController(0).inputSource.frame);
         });
       };
 
@@ -99,6 +90,51 @@ const ARScene = () => {
       window.removeEventListener('resize', handleResize);
     };
   }, []);
+
+  // Get the hit test source
+  const requestHitTestSource = () => {
+    const session = renderer.xr.getSession();
+    if (session) {
+      session.requestReferenceSpace('viewer').then(function (referenceSpace) {
+        session.requestHitTestSource({ space: referenceSpace }).then(function (source) {
+          hitTestSource = source;
+        });
+      });
+      session.addEventListener('end', function () {
+        hitTestSourceRequested = false;
+        hitTestSource = null;
+      });
+      hitTestSourceRequested = true;
+    }
+  };
+
+  // Update the reticle position based on hit test results
+  const getHitTestResults = (frame) => {
+    const hitTestResults = frame.getHitTestResults(hitTestSource);
+
+    if (hitTestResults.length) {
+      const referenceSpace = renderer.xr.getReferenceSpace();
+      const hit = hitTestResults[0];
+      const pose = hit.getPose(referenceSpace);
+
+      reticle.visible = true;
+      reticle.matrix.fromArray(pose.transform.matrix);
+      reticle.updateMatrixWorld();
+    } else {
+      reticle.visible = false;
+    }
+  };
+
+  // Handle object placement on tap
+  const onSelect = (event) => {
+    if (reticle.visible && !objectPlacedRef.current) {
+      placedObject = model.clone();
+      placedObject.position.copy(reticle.position);
+      placedObject.visible = true;
+      scene.add(placedObject);
+      objectPlacedRef.current = true;
+    }
+  };
 
   return <canvas ref={canvasRef} style={{ width: '100vw', height: '100vh', display: 'block' }} />;
 };
