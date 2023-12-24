@@ -7,7 +7,6 @@ const ARScene = () => {
   const canvasRef = useRef(null);
   const objectPlacedRef = useRef(false); // Reference to track if the object has been placed
   let scene, camera, renderer, model, reticle, placedObject, hitTestSource = null;
-  let hitTestSourceRequested = false;
 
   const onSessionStart = (event) => {
     // Do something when the AR session starts
@@ -50,7 +49,7 @@ const ARScene = () => {
       const reticleGeometry = new THREE.RingGeometry(0.15, 0.2, 32);
       const reticleMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, opacity: 0.5, transparent: true });
       reticle = new THREE.Mesh(reticleGeometry, reticleMaterial);
-      reticle.rotation.x = - Math.PI / 2; // Correct orientation
+      reticle.rotation.x = -Math.PI / 2; // Correct orientation
       reticle.visible = false;
       scene.add(reticle);
 
@@ -73,7 +72,7 @@ const ARScene = () => {
             renderer.setSize(newWidth, newHeight);
           }
 
-          if (hitTestSourceRequested === false) requestHitTestSource();
+          if (hitTestSource === null) requestHitTestSource();
           if (hitTestSource) getHitTestResults(renderer.xr.getController(0).inputSource.frame);
         });
       };
@@ -128,13 +127,6 @@ const ARScene = () => {
         hitTestSource = source;
       });
     });
-
-    session.addEventListener('end', function () {
-      hitTestSourceRequested = false;
-      hitTestSource = null;
-    });
-
-    hitTestSourceRequested = true;
   };
 
   // Function to get hit test results
