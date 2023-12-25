@@ -34,29 +34,30 @@ const ARScene = () => {
         const gltfLoader = new GLTFLoader();
 
         const onSelect = () => {
-            if (reticle.current.visible) {
-                gltfLoader.load(
-                    './gelnimbus.glb',
-                    function (gltf) {
-                        const model = gltf.scene;
-
-                        // Adjust the position to be relative to the camera and reticle
-                        const offset = new THREE.Vector3(0, 0, -0.5); // Adjust the offset as needed
-                        offset.applyQuaternion(camera.current.quaternion);
-                        offset.add(reticle.current.position);
-
-                        model.position.copy(offset);
-                        model.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
-
-                        scene.current.add(model);
-                    },
-                    undefined,
-                    function (error) {
-                        console.error('Error loading GLB model', error);
-                    }
-                );
-            }
-        };
+          if (reticle.current.visible) {
+              gltfLoader.load(
+                  './gelnimbus.glb',
+                  function (gltf) {
+                      const model = gltf.scene;
+      
+                      // Adjust the position to be relative to the camera and reticle
+                      const offset = new THREE.Vector3(0, -0.1, -0.5); // Adjust the offset as needed
+                      offset.applyQuaternion(camera.current.quaternion);
+                      offset.add(reticle.current.position);
+      
+                      model.position.copy(offset);
+                      model.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
+      
+                      scene.current.add(model);
+                  },
+                  undefined,
+                  function (error) {
+                      console.error('Error loading GLB model', error);
+                  }
+              );
+          }
+      };
+      
 
         controller.current = renderer.current.xr.getController(0);
         controller.current.addEventListener('select', onSelect);
