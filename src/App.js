@@ -37,7 +37,7 @@ const ARScene = () => {
         const onSelect = () => {
             if (reticle.current.visible) {
                 gltfLoader.load(
-                    './airjordan.glb',
+                    './gelnimbus.glb',
                     function (gltf) {
                         const model = gltf.scene;
                         model.position.copy(reticle.current.position);
