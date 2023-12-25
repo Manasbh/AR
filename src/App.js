@@ -11,7 +11,6 @@ const ARScene = () => {
     const reticle = useRef();
     const hitTestSource = useRef(null);
     let hitTestSourceRequested = false;
-    let controller;
 
     useEffect(() => {
         const container = containerRef.current;
@@ -41,8 +40,9 @@ const ARScene = () => {
                     function (gltf) {
                         const model = gltf.scene;
 
+                        // Adjust the position to be relative to the camera and reticle
                         const offset = new THREE.Vector3(0, 0, -0.3); // Adjust the offset as needed
-                        offset.applyQuaternion(reticle.current.quaternion);
+                        offset.applyQuaternion(camera.current.quaternion);
                         offset.add(reticle.current.position);
 
                         model.position.copy(offset);
@@ -58,7 +58,7 @@ const ARScene = () => {
             }
         };
 
-        controller = renderer.current.xr.getController(0);
+        const controller = renderer.current.xr.getController(0);
         controller.addEventListener('select', onSelect);
         scene.current.add(controller);
 
