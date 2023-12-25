@@ -12,7 +12,7 @@ const ARScene = () => {
     const hitTestSource = useRef(null);
     let hitTestSourceRequested = false;
 
-    const boxDimensions = { width: 1, height: 1, depth: 1 }; // Predefined box dimensions
+    const boxDimensions = { width: 0.2, height: 0.2, depth: 0.2 }; // Predefined box dimensions
 
     useEffect(() => {
         const container = containerRef.current;
