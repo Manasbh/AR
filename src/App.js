@@ -11,6 +11,7 @@ const ARScene = () => {
     const reticle = useRef();
     const hitTestSource = useRef(null);
     let hitTestSourceRequested = false;
+    let controller; // Declaration of controller variable
 
     useEffect(() => {
         const container = containerRef.current;
@@ -34,34 +35,33 @@ const ARScene = () => {
         const gltfLoader = new GLTFLoader();
 
         const onSelect = () => {
-          if (reticle.current.visible) {
-              gltfLoader.load(
-                  './gelnimbus.glb',
-                  function (gltf) {
-                      const model = gltf.scene;
-      
-                      // Adjust the position to be relative to the camera and reticle
-                      const offset = new THREE.Vector3(0, -0.1, -0.5); // Adjust the offset as needed
-                      offset.applyQuaternion(camera.current.quaternion);
-                      offset.add(reticle.current.position);
-      
-                      model.position.copy(offset);
-                      model.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
-      
-                      scene.current.add(model);
-                  },
-                  undefined,
-                  function (error) {
-                      console.error('Error loading GLB model', error);
-                  }
-              );
-          }
-      };
-      
+            if (reticle.current.visible) {
+                gltfLoader.load(
+                    './gelnimbus.glb',
+                    function (gltf) {
+                        const model = gltf.scene;
 
-        controller.current = renderer.current.xr.getController(0);
-        controller.current.addEventListener('select', onSelect);
-        scene.current.add(controller.current);
+                        // Adjust the position to be relative to the camera and reticle
+                        const offset = new THREE.Vector3(0, -0.1, -0.5); // Adjust the offset as needed
+                        offset.applyQuaternion(camera.current.quaternion);
+                        offset.add(reticle.current.position);
+
+                        model.position.copy(offset);
+                        model.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
+
+                        scene.current.add(model);
+                    },
+                    undefined,
+                    function (error) {
+                        console.error('Error loading GLB model', error);
+                    }
+                );
+            }
+        };
+
+        controller = renderer.current.xr.getController(0); // Assign the controller here
+        controller.addEventListener('select', onSelect);
+        scene.current.add(controller);
 
         reticle.current = new THREE.Mesh(
             new THREE.RingGeometry(0.15, 0.2, 32).rotateX(-Math.PI / 2),
@@ -76,78 +76,78 @@ const ARScene = () => {
         return () => {
             // Cleanup logic (if needed)
         };
-    }, []); // Empty dependency array ensures this effect runs only once on mount
+    }, []);
 
     const onWindowResize = () => {
-      camera.current.aspect = window.innerWidth / window.innerHeight;
-      camera.current.updateProjectionMatrix();
-      renderer.current.setSize(window.innerWidth, window.innerHeight);
-  };
+        camera.current.aspect = window.innerWidth / window.innerHeight;
+        camera.current.updateProjectionMatrix();
+        renderer.current.setSize(window.innerWidth, window.innerHeight);
+    };
 
-  const animate = () => {
-      renderer.current.setAnimationLoop(render);
-  };
+    const animate = () => {
+        renderer.current.setAnimationLoop(render);
+    };
 
-  const render = (timestamp, frame) => {
-      if (frame) {
-          const referenceSpace = renderer.current.xr.getReferenceSpace();
-          const session = renderer.current.xr.getSession();
+    const render = (timestamp, frame) => {
+        if (frame) {
+            const referenceSpace = renderer.current.xr.getReferenceSpace();
+            const session = renderer.current.xr.getSession();
 
-          if (hitTestSourceRequested === false) {
-              session.requestReferenceSpace('viewer').then(function (referenceSpace) {
-                  session.requestHitTestSource({ space: referenceSpace }).then(function (source) {
-                      hitTestSource.current = source;
-                  });
-              });
+            if (hitTestSourceRequested === false) {
+                session.requestReferenceSpace('viewer').then(function (referenceSpace) {
+                    session.requestHitTestSource({ space: referenceSpace }).then(function (source) {
+                        hitTestSource.current = source;
+                    });
+                });
 
-              session.addEventListener('end', function () {
-                  hitTestSourceRequested = false;
-                  hitTestSource.current = null;
-              });
+                session.addEventListener('end', function () {
+                    hitTestSourceRequested = false;
+                    hitTestSource.current = null;
+                });
 
-              hitTestSourceRequested = true;
-          }
+                hitTestSourceRequested = true;
+            }
 
-          if (hitTestSource.current) {
-              const hitTestResults = frame.getHitTestResults(hitTestSource.current);
+            if (hitTestSource.current) {
+                const hitTestResults = frame.getHitTestResults(hitTestSource.current);
 
-              if (hitTestResults.length) {
-                  const hit = hitTestResults[0];
+                if (hitTestResults.length) {
+                    const hit = hitTestResults[0];
 
-                  reticle.current.visible = true;
-                  reticle.current.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
+                    reticle.current.visible = true;
+                    reticle.current.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
 
-                  // Adjust reticle position based on camera and intersection point
-                  const raycaster = new THREE.Raycaster();
-                  const direction = new THREE.Vector3(0, 0, -1);
-                  direction.applyQuaternion(camera.current.quaternion);
+                    // Adjust reticle position based on camera and intersection point
+                    const raycaster = new THREE.Raycaster();
+                    const direction = new THREE.Vector3(0, 0, -1);
+                    direction.applyQuaternion(camera.current.quaternion);
 
-                  raycaster.set(camera.current.position, direction);
+                    raycaster.set(camera.current.position, direction);
 
-                  const intersects = raycaster.intersectObject(reticle.current);
+                    const intersects = raycaster.intersectObject(reticle.current);
 
-                  if (intersects.length > 0) {
-                      const intersection = intersects[0];
-                      const offset = new THREE.Vector3(0, 0, -0.5); // Adjust the offset as needed
-                      offset.applyQuaternion(camera.current.quaternion);
-                      offset.add(intersection.point);
+                    if (intersects.length > 0) {
+                        const intersection = intersects[0];
+                        const offset = new THREE.Vector3(0, -0.1, -0.5); // Adjust the offset as needed
+                        offset.applyQuaternion(camera.current.quaternion);
+                        offset.add(intersection.point);
 
-                      reticle.current.position.copy(offset);
-                  }
-              } else {
-                  reticle.current.visible = false;
-              }
-          }
-      }
+                        reticle.current.position.copy(offset);
+                    }
+                } else {
+                    reticle.current.visible = false;
+                }
+            }
+        }
 
-      renderer.current.render(scene.current, camera.current);
-  };
+        renderer.current.render(scene.current, camera.current);
+    };
 
-  useEffect(() => {
-      animate();
-  }, []);
+    useEffect(() => {
+        animate();
+    }, []);
 
-  return <div ref={containerRef}></div>;
+    return <div ref={containerRef}></div>;
 };
 
 export default ARScene;
