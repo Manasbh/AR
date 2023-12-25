@@ -12,6 +12,20 @@ const ARScene = () => {
     const hitTestSource = useRef(null);
     let hitTestSourceRequested = false;
 
+    const fitObjectToReticle = (model) => {
+        const bbox = new THREE.Box3().setFromObject(model);
+        const objectSize = new THREE.Vector3();
+        bbox.getSize(objectSize);
+
+        const reticleSize = new THREE.Vector3();
+        reticle.current.geometry.computeBoundingBox();
+        reticle.current.geometry.boundingBox.getSize(reticleSize);
+
+        const scaleFactor = reticleSize.x / objectSize.x; // Assuming scaling uniformly
+
+        model.scale.set(scaleFactor, scaleFactor, scaleFactor);
+    };
+
     useEffect(() => {
         const container = containerRef.current;
 
@@ -40,13 +54,14 @@ const ARScene = () => {
                     function (gltf) {
                         const model = gltf.scene;
 
-                        // Adjust the position to be relative to the camera and reticle
-                        const offset = new THREE.Vector3(0, 0, -0.3); // Adjust the offset as needed
+                        const offset = new THREE.Vector3(0, 0, -0.3);
                         offset.applyQuaternion(camera.current.quaternion);
                         offset.add(reticle.current.position);
 
                         model.position.copy(offset);
-                        model.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
+
+                        // Fit the model to the reticle size
+                        fitObjectToReticle(model);
 
                         scene.current.add(model);
                     },
