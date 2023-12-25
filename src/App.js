@@ -11,7 +11,7 @@ const ARScene = () => {
     const reticle = useRef();
     const hitTestSource = useRef(null);
     let hitTestSourceRequested = false;
-    let controller; // Declaration of controller variable
+    let controller;
 
     useEffect(() => {
         const container = containerRef.current;
@@ -41,9 +41,8 @@ const ARScene = () => {
                     function (gltf) {
                         const model = gltf.scene;
 
-                        // Adjust the position to be relative to the camera and reticle
-                        const offset = new THREE.Vector3(0, -0.1, -0.5); // Adjust the offset as needed
-                        offset.applyQuaternion(camera.current.quaternion);
+                        const offset = new THREE.Vector3(0, 0, -0.3); // Adjust the offset as needed
+                        offset.applyQuaternion(reticle.current.quaternion);
                         offset.add(reticle.current.position);
 
                         model.position.copy(offset);
@@ -59,7 +58,7 @@ const ARScene = () => {
             }
         };
 
-        controller = renderer.current.xr.getController(0); // Assign the controller here
+        controller = renderer.current.xr.getController(0);
         controller.addEventListener('select', onSelect);
         scene.current.add(controller);
 
@@ -117,7 +116,6 @@ const ARScene = () => {
                     reticle.current.visible = true;
                     reticle.current.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
 
-                    // Adjust reticle position based on camera and intersection point
                     const raycaster = new THREE.Raycaster();
                     const direction = new THREE.Vector3(0, 0, -1);
                     direction.applyQuaternion(camera.current.quaternion);
@@ -128,8 +126,8 @@ const ARScene = () => {
 
                     if (intersects.length > 0) {
                         const intersection = intersects[0];
-                        const offset = new THREE.Vector3(0, -0.1, -0.5); // Adjust the offset as needed
-                        offset.applyQuaternion(camera.current.quaternion);
+                        const offset = new THREE.Vector3(0, 0, -0.3); // Adjust the offset as needed
+                        offset.applyQuaternion(reticle.current.quaternion);
                         offset.add(intersection.point);
 
                         reticle.current.position.copy(offset);
