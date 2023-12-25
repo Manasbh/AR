@@ -12,19 +12,7 @@ const ARScene = () => {
     const hitTestSource = useRef(null);
     let hitTestSourceRequested = false;
 
-    const fitObjectToReticle = (model) => {
-        const bbox = new THREE.Box3().setFromObject(model);
-        const objectSize = new THREE.Vector3();
-        bbox.getSize(objectSize);
-
-        const reticleSize = new THREE.Vector3();
-        reticle.current.geometry.computeBoundingBox();
-        reticle.current.geometry.boundingBox.getSize(reticleSize);
-
-        const scaleFactor = reticleSize.x / objectSize.x; // Assuming scaling uniformly
-
-        model.scale.set(scaleFactor, scaleFactor, scaleFactor);
-    };
+    const boxDimensions = { width: 1, height: 1, depth: 1 }; // Predefined box dimensions
 
     useEffect(() => {
         const container = containerRef.current;
@@ -54,14 +42,19 @@ const ARScene = () => {
                     function (gltf) {
                         const model = gltf.scene;
 
-                        const offset = new THREE.Vector3(0, 0, -0.3);
+                        const offset = new THREE.Vector3(0, 0, -0.3); // Adjust the offset as needed
                         offset.applyQuaternion(camera.current.quaternion);
                         offset.add(reticle.current.position);
 
                         model.position.copy(offset);
 
-                        // Fit the model to the reticle size
-                        fitObjectToReticle(model);
+                        // Calculate scaling based on predefined box dimensions
+                        const scaleFactorX = boxDimensions.width / model.scale.x;
+                        const scaleFactorY = boxDimensions.height / model.scale.y;
+                        const scaleFactorZ = boxDimensions.depth / model.scale.z;
+
+                        const scaleFactor = Math.min(scaleFactorX, scaleFactorY, scaleFactorZ);
+                        model.scale.multiplyScalar(scaleFactor);
 
                         scene.current.add(model);
                     },
