@@ -4,148 +4,126 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { ARButton } from 'three/examples/jsm/webxr/ARButton';
 
 const ARScene = () => {
-  const canvasRef = useRef(null);
-  const objectPlacedRef = useRef(false); // Reference to track if the object has been placed
-  let scene, camera, renderer, model, reticle, placedObject, hitTestSource = null;
+    const containerRef = useRef();
+    const camera = useRef();
+    const scene = useRef();
+    const renderer = useRef();
+    const controller = useRef();
+    const reticle = useRef();
+    const hitTestSource = useRef(null);
+    let hitTestSourceRequested = false;
 
-  const onSessionStart = (event) => {
-    // Do something when the AR session starts
-  };
+    useEffect(() => {
+        const container = containerRef.current;
 
-  // Function to handle AR session end
-  const onSessionEnd = (event) => {
-    // Do something when the AR session ends
-  };
+        scene.current = new THREE.Scene();
 
-  useEffect(() => {
-    const setupScene = async () => {
-      // Set up the scene
-      scene = new THREE.Scene();
+        camera.current = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
 
-      // Set up the camera
-      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-      camera.position.z = 0;
-      camera.position.x = -3;
-      camera.position.y = 3.5;
-      camera.lookAt(-20, 5, -1);
+        const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 3);
+        light.position.set(0.5, 1, 0.25);
+        scene.current.add(light);
 
-      // Set up the renderer with antialiasing enabled
-      renderer = new THREE.WebGLRenderer({ canvas: canvasRef.current, antialias: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      document.body.appendChild(ARButton.createButton(renderer)); // Add AR button
+        renderer.current = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.current.setPixelRatio(window.devicePixelRatio);
+        renderer.current.setSize(window.innerWidth, window.innerHeight);
+        renderer.current.xr.enabled = true;
+        container.appendChild(renderer.current.domElement);
 
-      // Load the GLTF model
-      const loader = new GLTFLoader();
-      try {
-        const gltf = await loader.loadAsync('/envi1.glb');
-        model = gltf.scene;
-        model.visible = false; // Initially hide the model
-        scene.add(model);
-      } catch (error) {
-        console.error('Error loading GLTF model:', error);
-      }
+        document.body.appendChild(ARButton.createButton(renderer.current, { requiredFeatures: ['hit-test'] }));
 
-      // Set up the reticle for object placement indication
-      const reticleGeometry = new THREE.RingGeometry(0.15, 0.2, 32);
-      const reticleMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, opacity: 0.5, transparent: true });
-      reticle = new THREE.Mesh(reticleGeometry, reticleMaterial);
-      reticle.rotation.x = -Math.PI / 2; // Correct orientation
-      reticle.visible = false;
-      scene.add(reticle);
+        const gltfLoader = new GLTFLoader();
 
-      // Handle AR session
-      renderer.xr.enabled = true;
-      renderer.xr.addEventListener('sessionstart', onSessionStart);
-      renderer.xr.addEventListener('sessionend', onSessionEnd);
-      renderer.xr.addEventListener('select', onSelect);
+        const onSelect = () => {
+            if (reticle.current.visible) {
+                gltfLoader.load(
+                    './airjordan.glb',
+                    function (gltf) {
+                        const model = gltf.scene;
+                        model.position.copy(reticle.current.position);
+                        model.quaternion.copy(reticle.current.quaternion);
+                        model.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
+                        scene.current.add(model);
+                    },
+                    undefined,
+                    function (error) {
+                        console.error('Error loading GLB model', error);
+                    }
+                );
+            }
+        };
 
-      // Set up animation loop
-      const animate = () => {
-        renderer.setAnimationLoop(() => {
-          renderer.render(scene, camera);
-          if (renderer.xr.isPresenting) {
-            const newWidth = window.innerWidth;
-            const newHeight = window.innerHeight;
+        controller.current = renderer.current.xr.getController(0);
+        controller.current.addEventListener('select', onSelect);
+        scene.current.add(controller.current);
 
-            camera.aspect = newWidth / newHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(newWidth, newHeight);
-          }
+        reticle.current = new THREE.Mesh(
+            new THREE.RingGeometry(0.15, 0.2, 32).rotateX(-Math.PI / 2),
+            new THREE.MeshBasicMaterial()
+        );
+        reticle.current.matrixAutoUpdate = false;
+        reticle.current.visible = false;
+        scene.current.add(reticle.current);
 
-          if (hitTestSource === null) requestHitTestSource();
-          if (hitTestSource) getHitTestResults(renderer.xr.getController(0).inputSource.frame);
-        });
-      };
+        window.addEventListener('resize', onWindowResize);
 
-      animate();
+        return () => {
+            // Cleanup logic (if needed)
+        };
+    }, []); // Empty dependency array ensures this effect runs only once on mount
+
+    const onWindowResize = () => {
+        camera.current.aspect = window.innerWidth / window.innerHeight;
+        camera.current.updateProjectionMatrix();
+        renderer.current.setSize(window.innerWidth, window.innerHeight);
     };
 
-    setupScene();
-
-    const handleResize = () => {
-      if (renderer.xr.isPresenting) {
-        const newWidth = window.innerWidth;
-        const newHeight = window.innerHeight;
-
-        camera.aspect = newWidth / newHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(newWidth, newHeight);
-      }
+    const animate = () => {
+        renderer.current.setAnimationLoop(render);
     };
 
-    window.addEventListener('resize', handleResize);
+    const render = (timestamp, frame) => {
+        if (frame) {
+            const referenceSpace = renderer.current.xr.getReferenceSpace();
+            const session = renderer.current.xr.getSession();
 
-    return () => {
-      window.removeEventListener('resize', handleResize);
+            if (hitTestSourceRequested === false) {
+                session.requestReferenceSpace('viewer').then(function (referenceSpace) {
+                    session.requestHitTestSource({ space: referenceSpace }).then(function (source) {
+                        hitTestSource.current = source;
+                    });
+                });
 
-      // Clean up the hitTestSource event listeners and references
-      const session = renderer.xr.getSession();
-      if (session && hitTestSource) {
-        session.removeEventListener('end', onSessionEnd);
-        hitTestSource.cancel();
-        hitTestSource = null;
-      }
+                session.addEventListener('end', function () {
+                    hitTestSourceRequested = false;
+                    hitTestSource.current = null;
+                });
+
+                hitTestSourceRequested = true;
+            }
+
+            if (hitTestSource.current) {
+                const hitTestResults = frame.getHitTestResults(hitTestSource.current);
+
+                if (hitTestResults.length) {
+                    const hit = hitTestResults[0];
+
+                    reticle.current.visible = true;
+                    reticle.current.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
+                } else {
+                    reticle.current.visible = false;
+                }
+            }
+        }
+
+        renderer.current.render(scene.current, camera.current);
     };
-  }, []);
 
-  // Function to handle object placement on tap
-  const onSelect = (event) => {
-    if (reticle.visible && !objectPlacedRef.current) {
-      placedObject = model.clone(); // Clone the model to place it
-      placedObject.position.copy(reticle.position); // Set object position to the reticle's position
-      scene.add(placedObject); // Add the object to the scene
-      objectPlacedRef.current = true; // Update the reference to indicate object placement
-    }
-  };
+    useEffect(() => {
+        animate();
+    }, []); // Empty dependency array ensures this effect runs only once on mount
 
-  // Function to request hit test source
-  const requestHitTestSource = () => {
-    const session = renderer.xr.getSession();
-
-    session.requestReferenceSpace('viewer').then(function (referenceSpace) {
-      session.requestHitTestSource({ space: referenceSpace }).then(function (source) {
-        hitTestSource = source;
-      });
-    });
-  };
-
-  // Function to get hit test results
-  const getHitTestResults = (frame) => {
-    const hitTestResults = frame.getHitTestResults(hitTestSource);
-
-    if (hitTestResults.length) {
-      const referenceSpace = renderer.xr.getReferenceSpace();
-      const hit = hitTestResults[0];
-      const pose = hit.getPose(referenceSpace);
-
-      reticle.visible = true;
-      reticle.matrix.fromArray(pose.transform.matrix);
-    } else {
-      reticle.visible = false;
-    }
-  };
-
-  return <canvas ref={canvasRef} style={{ width: '100vw', height: '100vh', display: 'block' }} />;
+    return <div ref={containerRef}></div>;
 };
 
 export default ARScene;
