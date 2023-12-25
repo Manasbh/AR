@@ -36,7 +36,7 @@ const ARScene = () => {
         const onSelect = () => {
             if (reticle.current.visible) {
                 gltfLoader.load(
-                    './gelnimbus.glb',
+                    './3DModel.glb',
                     function (gltf) {
                         const model = gltf.scene;
 
