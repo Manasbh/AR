@@ -8,7 +8,6 @@ const ARScene = () => {
     const camera = useRef();
     const scene = useRef();
     const renderer = useRef();
-    const controller = useRef();
     const reticle = useRef();
     const hitTestSource = useRef(null);
     let hitTestSourceRequested = false;
@@ -40,9 +39,15 @@ const ARScene = () => {
                     './gelnimbus.glb',
                     function (gltf) {
                         const model = gltf.scene;
-                        model.position.copy(reticle.current.position);
-                        model.quaternion.copy(reticle.current.quaternion);
+
+                        // Adjust the position to be relative to the camera and reticle
+                        const offset = new THREE.Vector3(0, 0, -0.5); // Adjust the offset as needed
+                        offset.applyQuaternion(camera.current.quaternion);
+                        offset.add(reticle.current.position);
+
+                        model.position.copy(offset);
                         model.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
+
                         scene.current.add(model);
                     },
                     undefined,
@@ -73,57 +78,75 @@ const ARScene = () => {
     }, []); // Empty dependency array ensures this effect runs only once on mount
 
     const onWindowResize = () => {
-        camera.current.aspect = window.innerWidth / window.innerHeight;
-        camera.current.updateProjectionMatrix();
-        renderer.current.setSize(window.innerWidth, window.innerHeight);
-    };
+      camera.current.aspect = window.innerWidth / window.innerHeight;
+      camera.current.updateProjectionMatrix();
+      renderer.current.setSize(window.innerWidth, window.innerHeight);
+  };
 
-    const animate = () => {
-        renderer.current.setAnimationLoop(render);
-    };
+  const animate = () => {
+      renderer.current.setAnimationLoop(render);
+  };
 
-    const render = (timestamp, frame) => {
-        if (frame) {
-            const referenceSpace = renderer.current.xr.getReferenceSpace();
-            const session = renderer.current.xr.getSession();
+  const render = (timestamp, frame) => {
+      if (frame) {
+          const referenceSpace = renderer.current.xr.getReferenceSpace();
+          const session = renderer.current.xr.getSession();
 
-            if (hitTestSourceRequested === false) {
-                session.requestReferenceSpace('viewer').then(function (referenceSpace) {
-                    session.requestHitTestSource({ space: referenceSpace }).then(function (source) {
-                        hitTestSource.current = source;
-                    });
-                });
+          if (hitTestSourceRequested === false) {
+              session.requestReferenceSpace('viewer').then(function (referenceSpace) {
+                  session.requestHitTestSource({ space: referenceSpace }).then(function (source) {
+                      hitTestSource.current = source;
+                  });
+              });
 
-                session.addEventListener('end', function () {
-                    hitTestSourceRequested = false;
-                    hitTestSource.current = null;
-                });
+              session.addEventListener('end', function () {
+                  hitTestSourceRequested = false;
+                  hitTestSource.current = null;
+              });
 
-                hitTestSourceRequested = true;
-            }
+              hitTestSourceRequested = true;
+          }
 
-            if (hitTestSource.current) {
-                const hitTestResults = frame.getHitTestResults(hitTestSource.current);
+          if (hitTestSource.current) {
+              const hitTestResults = frame.getHitTestResults(hitTestSource.current);
 
-                if (hitTestResults.length) {
-                    const hit = hitTestResults[0];
+              if (hitTestResults.length) {
+                  const hit = hitTestResults[0];
 
-                    reticle.current.visible = true;
-                    reticle.current.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
-                } else {
-                    reticle.current.visible = false;
-                }
-            }
-        }
+                  reticle.current.visible = true;
+                  reticle.current.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
 
-        renderer.current.render(scene.current, camera.current);
-    };
+                  // Adjust reticle position based on camera and intersection point
+                  const raycaster = new THREE.Raycaster();
+                  const direction = new THREE.Vector3(0, 0, -1);
+                  direction.applyQuaternion(camera.current.quaternion);
 
-    useEffect(() => {
-        animate();
-    }, []); // Empty dependency array ensures this effect runs only once on mount
+                  raycaster.set(camera.current.position, direction);
 
-    return <div ref={containerRef}></div>;
+                  const intersects = raycaster.intersectObject(reticle.current);
+
+                  if (intersects.length > 0) {
+                      const intersection = intersects[0];
+                      const offset = new THREE.Vector3(0, 0, -0.5); // Adjust the offset as needed
+                      offset.applyQuaternion(camera.current.quaternion);
+                      offset.add(intersection.point);
+
+                      reticle.current.position.copy(offset);
+                  }
+              } else {
+                  reticle.current.visible = false;
+              }
+          }
+      }
+
+      renderer.current.render(scene.current, camera.current);
+  };
+
+  useEffect(() => {
+      animate();
+  }, []);
+
+  return <div ref={containerRef}></div>;
 };
 
 export default ARScene;
