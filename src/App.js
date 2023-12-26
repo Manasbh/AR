@@ -71,14 +71,40 @@ const ARScene = () => {
 
     function onSelect() {
         if (reticle.current.visible) {
-            const geometry = new THREE.CylinderGeometry(0.1, 0.1, 0.2, 32).translate(0, 0.1, 0);
-            const material = new THREE.MeshPhongMaterial({ color: 0xffffff * Math.random() });
-            const mesh = new THREE.Mesh(geometry, material);
-            reticle.current.matrix.decompose(mesh.position, mesh.quaternion, mesh.scale);
-            mesh.scale.y = Math.random() * 2 + 1;
-            scene.current.add(mesh);
+            const boxDimensions = { width: 0.2, height: 0.2, depth: 0.2 }; // Predefined box dimensions
+    
+            const gltfLoader = new GLTFLoader();
+    
+            gltfLoader.load(
+                './3DModel.glb',
+                function (gltf) {
+                    const model = gltf.scene;
+    
+                    // Assuming the GLB model needs scaling to fit the box dimensions
+                    model.scale.set(
+                        boxDimensions.width / 2,
+                        boxDimensions.height / 2,
+                        boxDimensions.depth / 2
+                    );
+    
+                    const material = new THREE.MeshPhongMaterial({ color: 0xffffff * Math.random() });
+                    model.traverse((child) => {
+                        if (child.isMesh) {
+                            child.material = material;
+                        }
+                    });
+    
+                    reticle.current.matrix.decompose(model.position, model.quaternion, model.scale);
+                    scene.current.add(model);
+                },
+                undefined,
+                function (error) {
+                    console.error('Error loading GLB model', error);
+                }
+            );
         }
     }
+    
 
     function render(timestamp, frame) {
         if (frame) {
