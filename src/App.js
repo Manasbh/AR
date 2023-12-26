@@ -79,21 +79,26 @@ const ARScene = () => {
                 function (gltf) {
                     const model = gltf.scene;
     
-                    model.scale.set(
-                        boxDimensions.width / 2,
-                        boxDimensions.height / 2,
-                        boxDimensions.depth / 2
+                    const boundingBox = new THREE.Box3().setFromObject(model);
+                    const size = new THREE.Vector3();
+                    boundingBox.getSize(size);
+                    const maxDimension = Math.max(size.x, size.y, size.z);
+    
+                    const scaleFactor = Math.min(
+                        boxDimensions.width / maxDimension,
+                        boxDimensions.height / maxDimension,
+                        boxDimensions.depth / maxDimension
                     );
     
-                    model.traverse((child) => {
-                        if (child.isMesh) {
-                            // Apply a standard material instead of random colors
-                            const material = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
-                            child.material = material;
-                        }
-                    });
+                    model.scale.set(scaleFactor, scaleFactor, scaleFactor);
     
-                    reticle.current.matrix.decompose(model.position, model.quaternion, model.scale);
+                    const boundingBoxScaled = new THREE.Box3().setFromObject(model);
+                    const sizeScaled = new THREE.Vector3();
+                    boundingBoxScaled.getSize(sizeScaled);
+    
+                    model.position.copy(reticle.current.position);
+                    model.position.y -= sizeScaled.y / 2; // Adjust position to sit on the surface
+    
                     scene.current.add(model);
                 },
                 undefined,
@@ -103,6 +108,7 @@ const ARScene = () => {
             );
         }
     }
+    
     
     
 
