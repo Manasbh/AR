@@ -90,7 +90,7 @@ const ARScene = () => {
                     boundingBox.getSize(size);
                     const maxDimension = Math.max(size.x, size.y, size.z);
     
-                    const scaleFactor = 0.2 / maxDimension;
+                    const scaleFactor = 0.5 / maxDimension;
                     model.scale.multiplyScalar(scaleFactor);
     
                     scene.current.add(model);
