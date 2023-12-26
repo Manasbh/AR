@@ -68,6 +68,8 @@ const ARScene = () => {
     function animate() {
         renderer.current.setAnimationLoop(render);
     }
+    
+
     function onSelect() {
         if (reticle.current.visible) {
             const boxDimensions = { width: 0.2, height: 0.2, depth: 0.2 }; // Predefined box dimensions
@@ -79,26 +81,32 @@ const ARScene = () => {
                 function (gltf) {
                     const model = gltf.scene;
     
-                    const boundingBox = new THREE.Box3().setFromObject(model);
+                    // Calculate the size of the model
+                    const bbox = new THREE.Box3().setFromObject(model);
                     const size = new THREE.Vector3();
-                    boundingBox.getSize(size);
+                    bbox.getSize(size);
                     const maxDimension = Math.max(size.x, size.y, size.z);
     
+                    // Calculate the scaling factor to fit the model in the box
                     const scaleFactor = Math.min(
                         boxDimensions.width / maxDimension,
                         boxDimensions.height / maxDimension,
                         boxDimensions.depth / maxDimension
                     );
     
+                    // Apply the scaling
                     model.scale.set(scaleFactor, scaleFactor, scaleFactor);
     
-                    const boundingBoxScaled = new THREE.Box3().setFromObject(model);
-                    const sizeScaled = new THREE.Vector3();
-                    boundingBoxScaled.getSize(sizeScaled);
+                    // Get the scaled bounding box
+                    const scaledBbox = new THREE.Box3().setFromObject(model);
+                    const scaledSize = new THREE.Vector3();
+                    scaledBbox.getSize(scaledSize);
     
+                    // Set the model's position to sit on the surface
                     model.position.copy(reticle.current.position);
-                    model.position.y -= sizeScaled.y / 2; // Adjust position to sit on the surface
+                    model.position.y -= scaledSize.y / 2;
     
+                    // Add the model to the scene
                     scene.current.add(model);
                 },
                 undefined,
@@ -108,6 +116,7 @@ const ARScene = () => {
             );
         }
     }
+    
     
     
     
