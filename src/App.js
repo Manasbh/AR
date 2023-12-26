@@ -71,7 +71,8 @@ const ARScene = () => {
 
     function onSelect() {
         if (reticle.current.visible) {
-            GLTFLoader.load(
+            const gltfLoader = new GLTFLoader();
+            gltfLoader.load(
                 './3DModel.glb',
                 function (gltf) {
                     const model = gltf.scene;
@@ -96,8 +97,6 @@ const ARScene = () => {
         }
     }
     
-    
-
     function render(timestamp, frame) {
         if (frame) {
             const referenceSpace = renderer.current.xr.getReferenceSpace();
@@ -135,7 +134,7 @@ const ARScene = () => {
         renderer.current.render(scene.current, camera.current);
     }
 
-    return <></>; // You might want to return something here if needed
+    return null; // You might want to return something here if needed
 };
 
 export default ARScene;
