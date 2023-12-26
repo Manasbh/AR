@@ -4,7 +4,6 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { ARButton } from 'three/examples/jsm/webxr/ARButton';
 
 const ARScene = () => {
-    const gltfLoader = new THREE.GLTFLoader();
     const containerRef = useRef();
     const renderer = useRef();
     const camera = useRef();
@@ -72,7 +71,7 @@ const ARScene = () => {
 
     function onSelect() {
         if (reticle.current.visible) {
-            gltfLoader.load(
+            GLTFLoader.load(
                 './path/to/your/model.glb',
                 function (gltf) {
                     const model = gltf.scene;
