@@ -72,7 +72,7 @@ const ARScene = () => {
     function onSelect() {
         if (reticle.current.visible) {
             GLTFLoader.load(
-                './path/to/your/model.glb',
+                './3DModel.glb',
                 function (gltf) {
                     const model = gltf.scene;
     
