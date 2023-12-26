@@ -12,6 +12,7 @@ const ARScene = () => {
     const reticle = useRef();
     const hitTestSource = useRef(null);
     let hitTestSourceRequested = useRef(false);
+    const gltfLoader = new GLTFLoader();
 
     useEffect(() => {
         init();
@@ -71,7 +72,6 @@ const ARScene = () => {
 
     function onSelect() {
         if (reticle.current.visible) {
-            const gltfLoader = new GLTFLoader();
             gltfLoader.load(
                 './3DModel.glb',
                 function (gltf) {
@@ -84,7 +84,7 @@ const ARScene = () => {
                     boundingBox.getSize(size);
                     const maxDimension = Math.max(size.x, size.y, size.z);
     
-                    const scaleFactor = 0.2 / maxDimension; // Scale factor based on the maximum dimension
+                    const scaleFactor = 0.2 / maxDimension;
                     model.scale.multiplyScalar(scaleFactor);
     
                     scene.current.add(model);
