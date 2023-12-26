@@ -68,7 +68,6 @@ const ARScene = () => {
     function animate() {
         renderer.current.setAnimationLoop(render);
     }
-
     function onSelect() {
         if (reticle.current.visible) {
             const boxDimensions = { width: 0.2, height: 0.2, depth: 0.2 }; // Predefined box dimensions
@@ -80,16 +79,16 @@ const ARScene = () => {
                 function (gltf) {
                     const model = gltf.scene;
     
-                    // Assuming the GLB model needs scaling to fit the box dimensions
                     model.scale.set(
                         boxDimensions.width / 2,
                         boxDimensions.height / 2,
                         boxDimensions.depth / 2
                     );
     
-                    const material = new THREE.MeshPhongMaterial({ color: 0xffffff * Math.random() });
                     model.traverse((child) => {
                         if (child.isMesh) {
+                            // Apply a standard material instead of random colors
+                            const material = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
                             child.material = material;
                         }
                     });
@@ -104,6 +103,7 @@ const ARScene = () => {
             );
         }
     }
+    
     
 
     function render(timestamp, frame) {
