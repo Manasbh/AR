@@ -4,6 +4,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { ARButton } from 'three/examples/jsm/webxr/ARButton';
 
 const ARScene = () => {
+    const gltfLoader = new THREE.GLTFLoader();
     const containerRef = useRef();
     const renderer = useRef();
     const camera = useRef();
@@ -68,56 +69,33 @@ const ARScene = () => {
     function animate() {
         renderer.current.setAnimationLoop(render);
     }
-    
 
     function onSelect() {
         if (reticle.current.visible) {
-            const boxDimensions = { width: 0.2, height: 0.2, depth: 0.2 }; // Predefined box dimensions
-    
-            const gltfLoader = new GLTFLoader();
-    
             gltfLoader.load(
-                './3DModel.glb',
+                './path/to/your/model.glb',
                 function (gltf) {
                     const model = gltf.scene;
     
-                    // Calculate the size of the model
-                    const bbox = new THREE.Box3().setFromObject(model);
+                    reticle.current.matrix.decompose(model.position);
+    
+                    const boundingBox = new THREE.Box3().setFromObject(model);
                     const size = new THREE.Vector3();
-                    bbox.getSize(size);
+                    boundingBox.getSize(size);
                     const maxDimension = Math.max(size.x, size.y, size.z);
     
-                    // Calculate the scaling factor to fit the model in the box
-                    const scaleFactor = Math.min(
-                        boxDimensions.width / maxDimension,
-                        boxDimensions.height / maxDimension,
-                        boxDimensions.depth / maxDimension
-                    );
+                    const scaleFactor = 0.2 / maxDimension; // Scale factor based on the maximum dimension
+                    model.scale.multiplyScalar(scaleFactor);
     
-                    // Apply the scaling
-                    model.scale.set(scaleFactor, scaleFactor, scaleFactor);
-    
-                    // Get the scaled bounding box
-                    const scaledBbox = new THREE.Box3().setFromObject(model);
-                    const scaledSize = new THREE.Vector3();
-                    scaledBbox.getSize(scaledSize);
-    
-                    // Set the model's position to sit on the surface
-                    model.position.copy(reticle.current.position);
-                    model.position.y -= scaledSize.y / 2;
-    
-                    // Add the model to the scene
                     scene.current.add(model);
                 },
                 undefined,
                 function (error) {
-                    console.error('Error loading GLB model', error);
+                    console.error('Error loading GLTF model', error);
                 }
             );
         }
     }
-    
-    
     
     
 
