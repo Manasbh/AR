@@ -77,9 +77,15 @@ const ARScene = () => {
                 function (gltf) {
                     const model = gltf.scene;
     
-                    reticle.current.matrix.decompose(model.position);
-    
                     const boundingBox = new THREE.Box3().setFromObject(model);
+                    const center = new THREE.Vector3();
+                    boundingBox.getCenter(center);
+    
+                    reticle.current.matrix.decompose(model.position, model.quaternion, model.scale);
+    
+                    // Adjust the model's position based on reticle's position
+                    model.position.add(center); // Offset by the center of the bounding box
+    
                     const size = new THREE.Vector3();
                     boundingBox.getSize(size);
                     const maxDimension = Math.max(size.x, size.y, size.z);
@@ -96,6 +102,7 @@ const ARScene = () => {
             );
         }
     }
+    
     
     function render(timestamp, frame) {
         if (frame) {
