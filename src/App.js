@@ -19,8 +19,9 @@ const ARScene = () => {
         animate();
 
         return () => {
-            // Clean up logic here, if needed
-            containerRef.current.removeChild(renderer.current.domElement);
+            if (containerRef.current && renderer.current) {
+                containerRef.current.removeChild(renderer.current.domElement);
+            }
         };
     }, []);
 
@@ -29,7 +30,6 @@ const ARScene = () => {
         document.body.appendChild(containerRef.current);
 
         scene.current = new THREE.Scene();
-
         camera.current = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
 
         const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 3);
@@ -62,7 +62,6 @@ const ARScene = () => {
     function onWindowResize() {
         camera.current.aspect = window.innerWidth / window.innerHeight;
         camera.current.updateProjectionMatrix();
-
         renderer.current.setSize(window.innerWidth, window.innerHeight);
     }
 
@@ -76,23 +75,8 @@ const ARScene = () => {
                 './3DModel.glb',
                 function (gltf) {
                     const model = gltf.scene;
-        
-                    // Compute the bounding box of the model
-                    const boundingBox = new THREE.Box3().setFromObject(model);
-                    const center = new THREE.Vector3();
-                    boundingBox.getCenter(center);
-    
-                    // Translate the model's position to the reticle's position
                     model.position.copy(reticle.current.position);
-                    model.position.sub(center); // Adjust for the center of the bounding box
-    
-                    // Optionally, you can scale the model
-                    const size = new THREE.Vector3();
-                    boundingBox.getSize(size);
-                    const maxDimension = Math.max(size.x, size.y, size.z);
-                    const scaleFactor = 0.5 / maxDimension;
-                    model.scale.multiplyScalar(scaleFactor);
-        
+                    model.scale.set(0.5, 0.5, 0.5); // Adjust scale as needed
                     scene.current.add(model);
                 },
                 undefined,
@@ -102,48 +86,47 @@ const ARScene = () => {
             );
         }
     }
-    
-    
-    
+
     function render(timestamp, frame) {
         if (frame) {
             const referenceSpace = renderer.current.xr.getReferenceSpace();
             const session = renderer.current.xr.getSession();
-    
+
             if (!hitTestSourceRequested.current) {
                 session.requestReferenceSpace('viewer').then((refSpace) => {
                     session.requestHitTestSource({ space: refSpace }).then((source) => {
                         hitTestSource.current = source;
                     });
                 });
-    
-                session.addEventListener('end', () => {
-                    hitTestSourceRequested.current = false;
-                    hitTestSource.current = null;
-                });
-    
-                hitTestSourceRequested.current = true;
-            }
-    
-            // Perform hit test at a reduced frequency
-            if (hitTestSource.current && timestamp % 500 < 30) { // Adjust the modulus and threshold values as needed
-                const hitTestResults = frame.getHitTestResults(hitTestSource.current);
-    
-                if (hitTestResults.length) {
-                    const hit = hitTestResults[0];
-                    reticle.current.visible = true;
-                    reticle.current.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
-                } else {
-                    reticle.current.visible = false;
-                }
+
+                session.addEventListener('end',
+() => {
+hitTestSourceRequested.current = false;
+hitTestSource.current = null;
+});
+
+            hitTestSourceRequested.current = true;
+        }
+
+        if (hitTestSource.current) {
+            const hitTestResults = frame.getHitTestResults(hitTestSource.current);
+
+            if (hitTestResults.length) {
+                const hit = hitTestResults[0];
+
+                reticle.current.visible = true;
+                reticle.current.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
+                reticle.current.matrix.decompose(reticle.current.position, reticle.current.quaternion, reticle.current.scale);
+            } else {
+                reticle.current.visible = false;
             }
         }
-    
-        renderer.current.render(scene.current, camera.current);
     }
-    
 
-    return null; // You might want to return something here if needed
+    renderer.current.render(scene.current, camera.current);
+}
+
+return null;
 };
 
 export default ARScene;
