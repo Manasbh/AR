@@ -40,7 +40,6 @@ const ARScene = () => {
         renderer.current.setPixelRatio(window.devicePixelRatio);
         renderer.current.setSize(window.innerWidth, window.innerHeight);
         renderer.current.xr.enabled = true;
-        renderer.current.shadowMap.enabled = false;
         containerRef.current.appendChild(renderer.current.domElement);
 
         document.body.appendChild(ARButton.createButton(renderer.current, { requiredFeatures: ['hit-test'] }));
@@ -67,10 +66,6 @@ const ARScene = () => {
         renderer.current.setSize(window.innerWidth, window.innerHeight);
     }
 
-    function animate() {
-        renderer.current.setAnimationLoop(render);
-    }
-
     function onSelect() {
         if (reticle.current.visible) {
             gltfLoader.load(
@@ -82,10 +77,8 @@ const ARScene = () => {
                     const center = new THREE.Vector3();
                     boundingBox.getCenter(center);
     
-                    reticle.current.matrix.decompose(model.position, model.quaternion, model.scale);
-    
-                    // Adjust the model's position based on reticle's position
-                    model.position.add(center); // Offset by the center of the bounding box
+                    model.position.copy(reticle.current.position); // Set model's position to reticle's position
+                    model.position.sub(center); // Adjust for the center of the bounding box
     
                     const size = new THREE.Vector3();
                     boundingBox.getSize(size);
@@ -104,43 +97,28 @@ const ARScene = () => {
         }
     }
     
-    
     function render(timestamp, frame) {
         if (frame) {
             const referenceSpace = renderer.current.xr.getReferenceSpace();
-            const session = renderer.current.xr.getSession();
-
-            // Optimized Hit Test Loop
-            if (!hitTestSourceRequested.current) {
-                session.requestReferenceSpace('viewer').then((refSpace) => {
-                    session.requestHitTestSource({ space: refSpace }).then((source) => {
-                        hitTestSource.current = source;
-                    });
-                });
-
-                session.addEventListener('end', () => {
-                    hitTestSourceRequested.current = false;
-                    hitTestSource.current = null;
-                });
-
-                hitTestSourceRequested.current = true;
-            }
-
+    
             if (hitTestSource.current) {
                 const hitTestResults = frame.getHitTestResults(hitTestSource.current);
-
+    
                 if (hitTestResults.length) {
                     const hit = hitTestResults[0];
+    
                     reticle.current.visible = true;
                     reticle.current.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
+                    reticle.current.matrix.decompose(reticle.current.position, reticle.current.quaternion, reticle.current.scale);
                 } else {
                     reticle.current.visible = false;
                 }
             }
         }
-
+    
         renderer.current.render(scene.current, camera.current);
     }
+    
 
     return null; // You might want to return something here if needed
 };
