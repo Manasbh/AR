@@ -107,31 +107,40 @@ const ARScene = () => {
     function render(timestamp, frame) {
         if (frame) {
             const referenceSpace = renderer.current.xr.getReferenceSpace();
-    
-            // Throttle hit test to every 100ms (example)
-            if (!lastHitTestTime || timestamp - lastHitTestTime > 100) {
-                if (hitTestSource.current) {
-                    const hitTestResults = frame.getHitTestResults(hitTestSource.current);
-    
-                    if (hitTestResults.length) {
-                        const hit = hitTestResults[0];
-    
-                        reticle.current.visible = true;
-                        reticle.current.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
-                        reticle.current.matrix.decompose(reticle.current.position, reticle.current.quaternion, reticle.current.scale);
-                    } else {
-                        reticle.current.visible = false;
-                    }
+            const session = renderer.current.xr.getSession();
+
+            if (!hitTestSourceRequested.current) {
+                session.requestReferenceSpace('viewer').then((refSpace) => {
+                    session.requestHitTestSource({ space: refSpace }).then((source) => {
+                        hitTestSource.current = source;
+                    });
+                });
+
+                session.addEventListener('end', () => {
+                    hitTestSourceRequested.current = false;
+                    hitTestSource.current = null;
+                });
+
+                hitTestSourceRequested.current = true;
+            }
+
+            if (hitTestSource.current) {
+                const hitTestResults = frame.getHitTestResults(hitTestSource.current);
+
+                if (hitTestResults.length) {
+                    const hit = hitTestResults[0];
+
+                    reticle.current.visible = true;
+                    reticle.current.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
+                } else {
+                    reticle.current.visible = false;
                 }
-                lastHitTestTime = timestamp;
             }
         }
-    
+
         renderer.current.render(scene.current, camera.current);
     }
-    
-    let lastHitTestTime = 0; // Define this variable outside of your render function
-    
+
     return null; // You might want to return something here if needed
 };
 
