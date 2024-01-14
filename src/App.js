@@ -108,28 +108,28 @@ const ARScene = () => {
         if (frame) {
             const referenceSpace = renderer.current.xr.getReferenceSpace();
             const session = renderer.current.xr.getSession();
-
+    
             if (!hitTestSourceRequested.current) {
                 session.requestReferenceSpace('viewer').then((refSpace) => {
                     session.requestHitTestSource({ space: refSpace }).then((source) => {
                         hitTestSource.current = source;
                     });
                 });
-
+    
                 session.addEventListener('end', () => {
                     hitTestSourceRequested.current = false;
                     hitTestSource.current = null;
                 });
-
+    
                 hitTestSourceRequested.current = true;
             }
-
-            if (hitTestSource.current) {
+    
+            // Perform hit test at a reduced frequency
+            if (hitTestSource.current && timestamp % 500 < 30) { // Adjust the modulus and threshold values as needed
                 const hitTestResults = frame.getHitTestResults(hitTestSource.current);
-
+    
                 if (hitTestResults.length) {
                     const hit = hitTestResults[0];
-
                     reticle.current.visible = true;
                     reticle.current.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
                 } else {
@@ -137,9 +137,10 @@ const ARScene = () => {
                 }
             }
         }
-
+    
         renderer.current.render(scene.current, camera.current);
     }
+    
 
     return null; // You might want to return something here if needed
 };
