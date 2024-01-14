@@ -19,9 +19,8 @@ const ARScene = () => {
         animate();
 
         return () => {
-            if (containerRef.current && renderer.current) {
-                containerRef.current.removeChild(renderer.current.domElement);
-            }
+            // Clean up logic here, if needed
+            containerRef.current.removeChild(renderer.current.domElement);
         };
     }, []);
 
@@ -67,6 +66,10 @@ const ARScene = () => {
         renderer.current.setSize(window.innerWidth, window.innerHeight);
     }
 
+    function animate() {
+        renderer.current.setAnimationLoop(render);
+    }
+
     function onSelect() {
         if (reticle.current.visible) {
             gltfLoader.load(
@@ -78,8 +81,10 @@ const ARScene = () => {
                     const center = new THREE.Vector3();
                     boundingBox.getCenter(center);
     
-                    model.position.copy(reticle.current.position); // Set model's position to reticle's position
-                    model.position.sub(center); // Adjust for the center of the bounding box
+                    reticle.current.matrix.decompose(model.position, model.quaternion, model.scale);
+    
+                    // Adjust the model's position based on reticle's position
+                    model.position.add(center); // Offset by the center of the bounding box
     
                     const size = new THREE.Vector3();
                     boundingBox.getSize(size);
@@ -98,12 +103,13 @@ const ARScene = () => {
         }
     }
     
+    
     function render(timestamp, frame) {
         if (frame) {
             const referenceSpace = renderer.current.xr.getReferenceSpace();
     
             // Throttle hit test to every 100ms (example)
-            if (!lastHitTestTime || timestamp - lastHitTestTime > 50) {
+            if (!lastHitTestTime || timestamp - lastHitTestTime > 100) {
                 if (hitTestSource.current) {
                     const hitTestResults = frame.getHitTestResults(hitTestSource.current);
     
@@ -126,8 +132,6 @@ const ARScene = () => {
     
     let lastHitTestTime = 0; // Define this variable outside of your render function
     
-    
-
     return null; // You might want to return something here if needed
 };
 
