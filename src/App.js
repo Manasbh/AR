@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { ARButton } from 'three/examples/jsm/webxr/ARButton';
-import debounce from 'lodash.debounce'; // Ensure lodash.debounce is installed
 
 const ARScene = () => {
     const containerRef = useRef();
@@ -13,7 +12,7 @@ const ARScene = () => {
     const reticle = useRef();
     const hitTestSource = useRef(null);
     const hitTestSourceRequested = useRef(false);
-    const [model, setModel] = useState();
+    const model = useRef(); // Use useRef for the model
     const gltfLoader = new GLTFLoader();
 
     useEffect(() => {
@@ -21,15 +20,14 @@ const ARScene = () => {
         animate();
 
         // Preload GLTF model
-        gltfLoader.load('./3DModel.glb', (gltf) => setModel(gltf.scene), undefined, (error) => console.error('Error loading GLTF model', error));
-
-        // Debounce resize event
-        const debouncedResize = debounce(onWindowResize, 250);
-        window.addEventListener('resize', debouncedResize);
+        gltfLoader.load('./3DModel.glb', (gltf) => {
+            model.current = gltf.scene;
+        }, undefined, (error) => console.error('Error loading GLTF model', error));
 
         return () => {
-            window.removeEventListener('resize', debouncedResize);
-            containerRef.current.removeChild(renderer.current.domElement);
+            if (containerRef.current) {
+                containerRef.current.removeChild(renderer.current.domElement);
+            }
         };
     }, []);
 
@@ -59,6 +57,8 @@ const ARScene = () => {
         reticle.current.matrixAutoUpdate = false;
         reticle.current.visible = false;
         scene.current.add(reticle.current);
+
+        window.addEventListener('resize', onWindowResize);
     };
 
     const onWindowResize = () => {
@@ -72,10 +72,9 @@ const ARScene = () => {
     };
 
     const onSelect = () => {
-        if (reticle.current.visible && model) {
-            const clonedModel = model.clone(); // Clone the preloaded model
+        if (reticle.current.visible && model.current) {
+            const clonedModel = model.current.clone(); // Clone the preloaded model
 
-            // Adjust the model's position based on the reticle's position
             reticle.current.matrix.decompose(clonedModel.position, clonedModel.quaternion, clonedModel.scale);
             scene.current.add(clonedModel);
         }
