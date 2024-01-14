@@ -1,47 +1,46 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { ARButton } from 'three/examples/jsm/webxr/ARButton';
 
 const ARScene = () => {
     const containerRef = useRef();
-    const renderer = useRef(new THREE.WebGLRenderer({ antialias: true, alpha: true }));
-    const camera = useRef(new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20));
-    const scene = useRef(new THREE.Scene());
+    const renderer = useRef();
+    const camera = useRef();
+    const scene = useRef();
     const controller = useRef();
     const reticle = useRef();
     const hitTestSource = useRef(null);
-    const hitTestSourceRequested = useRef(false);
-    const model = useRef(); // Use useRef for the model
+    let hitTestSourceRequested = useRef(false);
     const gltfLoader = new GLTFLoader();
 
     useEffect(() => {
         init();
         animate();
 
-        // Preload GLTF model
-        gltfLoader.load('./3DModel.glb', (gltf) => {
-            model.current = gltf.scene;
-        }, undefined, (error) => console.error('Error loading GLTF model', error));
-
         return () => {
-            if (containerRef.current) {
-                containerRef.current.removeChild(renderer.current.domElement);
-            }
+            // Clean up logic here, if needed
+            containerRef.current.removeChild(renderer.current.domElement);
         };
     }, []);
 
-    const init = () => {
+    function init() {
         containerRef.current = document.createElement('div');
         document.body.appendChild(containerRef.current);
 
-        const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+        scene.current = new THREE.Scene();
+
+        camera.current = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+
+        const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 3);
         light.position.set(0.5, 1, 0.25);
         scene.current.add(light);
 
+        renderer.current = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.current.setPixelRatio(window.devicePixelRatio);
         renderer.current.setSize(window.innerWidth, window.innerHeight);
         renderer.current.xr.enabled = true;
+        renderer.current.shadowMap.enabled = false;
         containerRef.current.appendChild(renderer.current.domElement);
 
         document.body.appendChild(ARButton.createButton(renderer.current, { requiredFeatures: ['hit-test'] }));
@@ -51,7 +50,7 @@ const ARScene = () => {
         scene.current.add(controller.current);
 
         reticle.current = new THREE.Mesh(
-            new THREE.RingGeometry(0.15, 0.2, 24).rotateX(-Math.PI / 2),
+            new THREE.RingGeometry(0.15, 0.2, 32).rotateX(-Math.PI / 2),
             new THREE.MeshBasicMaterial()
         );
         reticle.current.matrixAutoUpdate = false;
@@ -59,32 +58,59 @@ const ARScene = () => {
         scene.current.add(reticle.current);
 
         window.addEventListener('resize', onWindowResize);
-    };
+    }
 
-    const onWindowResize = () => {
+    function onWindowResize() {
         camera.current.aspect = window.innerWidth / window.innerHeight;
         camera.current.updateProjectionMatrix();
+
         renderer.current.setSize(window.innerWidth, window.innerHeight);
-    };
+    }
 
-    const animate = () => {
+    function animate() {
         renderer.current.setAnimationLoop(render);
-    };
+    }
 
-    const onSelect = () => {
-        if (reticle.current.visible && model.current) {
-            const clonedModel = model.current.clone(); // Clone the preloaded model
-
-            reticle.current.matrix.decompose(clonedModel.position, clonedModel.quaternion, clonedModel.scale);
-            scene.current.add(clonedModel);
+    function onSelect() {
+        if (reticle.current.visible) {
+            gltfLoader.load(
+                './3DModel.glb',
+                function (gltf) {
+                    const model = gltf.scene;
+    
+                    const boundingBox = new THREE.Box3().setFromObject(model);
+                    const center = new THREE.Vector3();
+                    boundingBox.getCenter(center);
+    
+                    reticle.current.matrix.decompose(model.position, model.quaternion, model.scale);
+    
+                    // Adjust the model's position based on reticle's position
+                    model.position.add(center); // Offset by the center of the bounding box
+    
+                    const size = new THREE.Vector3();
+                    boundingBox.getSize(size);
+                    const maxDimension = Math.max(size.x, size.y, size.z);
+    
+                    const scaleFactor = 0.5 / maxDimension;
+                    model.scale.multiplyScalar(scaleFactor);
+    
+                    scene.current.add(model);
+                },
+                undefined,
+                function (error) {
+                    console.error('Error loading GLTF model', error);
+                }
+            );
         }
-    };
-
-    const render = (timestamp, frame) => {
+    }
+    
+    
+    function render(timestamp, frame) {
         if (frame) {
             const referenceSpace = renderer.current.xr.getReferenceSpace();
             const session = renderer.current.xr.getSession();
 
+            // Optimized Hit Test Loop
             if (!hitTestSourceRequested.current) {
                 session.requestReferenceSpace('viewer').then((refSpace) => {
                     session.requestHitTestSource({ space: refSpace }).then((source) => {
@@ -114,9 +140,9 @@ const ARScene = () => {
         }
 
         renderer.current.render(scene.current, camera.current);
-    };
+    }
 
-    return null; // You can return JSX here if needed for your React component
+    return null; // You might want to return something here if needed
 };
 
 export default ARScene;
