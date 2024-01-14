@@ -76,23 +76,23 @@ const ARScene = () => {
                 './3DModel.glb',
                 function (gltf) {
                     const model = gltf.scene;
-    
+        
+                    // Compute the bounding box of the model
                     const boundingBox = new THREE.Box3().setFromObject(model);
                     const center = new THREE.Vector3();
                     boundingBox.getCenter(center);
     
-                    reticle.current.matrix.decompose(model.position, model.quaternion, model.scale);
+                    // Translate the model's position to the reticle's position
+                    model.position.copy(reticle.current.position);
+                    model.position.sub(center); // Adjust for the center of the bounding box
     
-                    // Adjust the model's position based on reticle's position
-                    model.position.add(center); // Offset by the center of the bounding box
-    
+                    // Optionally, you can scale the model
                     const size = new THREE.Vector3();
                     boundingBox.getSize(size);
                     const maxDimension = Math.max(size.x, size.y, size.z);
-    
                     const scaleFactor = 0.5 / maxDimension;
                     model.scale.multiplyScalar(scaleFactor);
-    
+        
                     scene.current.add(model);
                 },
                 undefined,
@@ -102,6 +102,7 @@ const ARScene = () => {
             );
         }
     }
+    
     
     
     function render(timestamp, frame) {
