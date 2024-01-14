@@ -103,7 +103,7 @@ const ARScene = () => {
             const referenceSpace = renderer.current.xr.getReferenceSpace();
     
             // Throttle hit test to every 100ms (example)
-            if (!lastHitTestTime || timestamp - lastHitTestTime > 100) {
+            if (!lastHitTestTime || timestamp - lastHitTestTime > 50) {
                 if (hitTestSource.current) {
                     const hitTestResults = frame.getHitTestResults(hitTestSource.current);
     
