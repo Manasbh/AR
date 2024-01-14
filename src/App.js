@@ -19,8 +19,9 @@ const ARScene = () => {
         animate();
 
         return () => {
-            // Clean up logic here, if needed
-            containerRef.current.removeChild(renderer.current.domElement);
+            if (containerRef.current && renderer.current) {
+                containerRef.current.removeChild(renderer.current.domElement);
+            }
         };
     }, []);
 
