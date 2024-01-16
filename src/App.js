@@ -72,7 +72,7 @@ const ARScene = () => {
     function onSelect() {
         if (reticle.current.visible) {
             gltfLoader.load(
-                './3DModel.glb',
+                './fbg.glb',
                 function (gltf) {
                     const model = gltf.scene;
                     model.position.copy(reticle.current.position);
