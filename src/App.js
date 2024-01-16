@@ -80,7 +80,7 @@ const ARScene = () => {
     const onSelect = () => {
         if (reticle.current.visible) {
             gltfLoader.current.load(
-                './model.glb', // Specify your 3D model path here
+                './fbg.glb', // Specify your 3D model path here
                 gltf => {
                     const model = gltf.scene;
                     model.position.copy(reticle.current.position);
