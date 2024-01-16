@@ -76,7 +76,7 @@ const ARScene = () => {
     function onSelect() {
         if (reticle.current.visible) {
             gltfLoader.load(
-                './female_bag.glb',
+                './fbg.glb',
                 function (gltf) {
                     const model = gltf.scene;
                     model.position.copy(reticle.current.position);
