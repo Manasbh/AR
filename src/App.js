@@ -72,11 +72,11 @@ const ARScene = () => {
     function onSelect() {
         if (reticle.current.visible) {
             gltfLoader.load(
-                './3DModel.glb',
+                './female_bag.glb',
                 function (gltf) {
                     const model = gltf.scene;
                     model.position.copy(reticle.current.position);
-                    model.scale.set(0.5, 0.5, 0.5); // Adjust scale as needed
+                    model.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
                     scene.current.add(model);
                 },
                 undefined,
