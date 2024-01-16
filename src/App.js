@@ -36,6 +36,9 @@ const ARScene = () => {
         light.position.set(0.5, 1, 0.25);
         scene.current.add(light);
 
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Soft white light
+        scene.current.add(ambientLight);
+
         renderer.current = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.current.setPixelRatio(window.devicePixelRatio);
         renderer.current.setSize(window.innerWidth, window.innerHeight);
