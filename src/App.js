@@ -36,7 +36,7 @@ const ARScene = () => {
         light.position.set(0.5, 1, 0.25);
         scene.current.add(light);
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Soft white light
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7); // Soft white light
         scene.current.add(ambientLight);
 
         renderer.current = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -79,7 +79,7 @@ const ARScene = () => {
                 function (gltf) {
                     const model = gltf.scene;
                     model.position.copy(reticle.current.position);
-                    model.scale.set(0.2, 0.2, 0.2); // Adjust scale as needed
+                    model.scale.set(0.6, 0.6, 0.6); // Adjust scale as needed
                     scene.current.add(model);
                 },
                 undefined,
