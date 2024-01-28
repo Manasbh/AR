@@ -75,12 +75,15 @@ const ARScene = () => {
     function onSelect() {
         if (reticle.current.visible) {
             gltfLoader.load(
-                './wbag.glb',
+                './wbag.glb', // Ensure this path is correct and points to your 3D model
                 function (gltf) {
                     const model = gltf.scene;
                     model.position.copy(reticle.current.position);
-                    model.scale.set(0.2, 0.2, 0.2); // Adjust scale as needed
+                    model.scale.set(0.6, 0.6, 0.6); // Adjust scale as needed
                     scene.current.add(model);
+    
+                    // After placing the object, hide the reticle
+                    reticle.current.visible = false;
                 },
                 undefined,
                 function (error) {
@@ -89,6 +92,7 @@ const ARScene = () => {
             );
         }
     }
+    
 
     function render(timestamp, frame) {
         if (frame) {
