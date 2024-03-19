@@ -1,135 +1,66 @@
-import React, { useEffect, useRef } from 'react';
+// Import necessary modules
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { ARButton } from 'three/examples/jsm/webxr/ARButton';
 
-const ARScene = () => {
-    const containerRef = useRef();
-    const renderer = useRef();
-    const camera = useRef();
-    const scene = useRef();
-    const controller = useRef();
-    const reticle = useRef();
-    const hitTestSource = useRef(null);
-    let hitTestSourceRequested = useRef(false);
-    const gltfLoader = new GLTFLoader();
+// Set up the scene, camera, and renderer
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-    useEffect(() => {
-        init();
-        animate();
+// Add AR button
+document.body.appendChild(ARButton.createButton(renderer));
 
-        return () => {
-            if (containerRef.current && renderer.current) {
-                containerRef.current.removeChild(renderer.current.domElement);
-            }
-        };
-    }, []);
+// Create a sphere geometry
+const geometry = new THREE.SphereGeometry(0.1, 32, 32);
+const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+const sphere = new THREE.Mesh(geometry, material);
+scene.add(sphere);
 
-    function init() {
-        containerRef.current = document.createElement('div');
-        document.body.appendChild(containerRef.current);
+// Variable to track whether the object is stagnant
+let isStagnant = false;
 
-        scene.current = new THREE.Scene();
-        camera.current = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+// Function to handle tap event
+const handleTap = (event) => {
+  if (!isStagnant) {
+    isStagnant = true;
 
-        const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 3);
-        light.position.set(0.5, 1, 0.25);
-        scene.current.add(light);
+    // Get the tapped position in Three.js world coordinates
+    const tap = new THREE.Mesh(
+      new THREE.PlaneGeometry(1, 1),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, opacity: 0, transparent: true })
+    );
+    tap.rotation.x = -Math.PI / 2;
+    tap.position.copy(sphere.position);
+    scene.add(tap);
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7); // Soft white light
-        scene.current.add(ambientLight);
+    const tapPoint = new THREE.Vector3();
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(event.offsetX / window.innerWidth * 2 - 1, -(event.offsetY / window.innerHeight) * 2 + 1, camera);
+    raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 0, 1)), tapPoint);
 
-        renderer.current = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.current.setPixelRatio(window.devicePixelRatio);
-        renderer.current.setSize(window.innerWidth, window.innerHeight);
-        renderer.current.xr.enabled = true;
-        containerRef.current.appendChild(renderer.current.domElement);
+    // Set the sphere's position to the tapped position
+    sphere.position.copy(tapPoint);
 
-        document.body.appendChild(ARButton.createButton(renderer.current, { requiredFeatures: ['hit-test'] }));
-
-        controller.current = renderer.current.xr.getController(0);
-        controller.current.addEventListener('select', onSelect);
-        scene.current.add(controller.current);
-
-        reticle.current = new THREE.Mesh(
-            new THREE.RingGeometry(0.15, 0.2, 32).rotateX(-Math.PI / 2),
-            new THREE.MeshBasicMaterial()
-        );
-        reticle.current.matrixAutoUpdate = false;
-        reticle.current.visible = false;
-        scene.current.add(reticle.current);
-
-        window.addEventListener('resize', onWindowResize);
-    }
-
-    function onWindowResize() {
-        camera.current.aspect = window.innerWidth / window.innerHeight;
-        camera.current.updateProjectionMatrix();
-        renderer.current.setSize(window.innerWidth, window.innerHeight);
-    }
-
-    function animate() {
-        renderer.current.setAnimationLoop(render);
-    }
-
-    function onSelect() {
-        if (reticle.current.visible) {
-            gltfLoader.load(
-                './bag.glb',
-                function (gltf) {
-                    const model = gltf.scene;
-                    model.position.copy(reticle.current.position);
-                    model.scale.set(0.6, 0.6, 0.6); // Adjust scale as needed
-                    scene.current.add(model);
-                },
-                undefined,
-                function (error) {
-                    console.error('Error loading GLTF model', error);
-                }
-            );
-        }
-    }
-
-    function render(timestamp, frame) {
-        if (frame) {
-            const referenceSpace = renderer.current.xr.getReferenceSpace();
-            const session = renderer.current.xr.getSession();
-
-            if (!hitTestSourceRequested.current) {
-                session.requestReferenceSpace('viewer').then((refSpace) => {
-                    session.requestHitTestSource({ space: refSpace }).then((source) => {
-                        hitTestSource.current = source;
-                    });
-                });
-
-                session.addEventListener('end',
-() => {
-hitTestSourceRequested.current = false;
-hitTestSource.current = null;
-});
-
-            hitTestSourceRequested.current = true;
-        }
-
-        if (hitTestSource.current) {
-            const hitTestResults = frame.getHitTestResults(hitTestSource.current);
-
-            if (hitTestResults.length) {
-                const hit = hitTestResults[0];
-
-                reticle.current.visible = true;
-                reticle.current.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
-                reticle.current.matrix.decompose(reticle.current.position, reticle.current.quaternion, reticle.current.scale);
-            } else {
-                reticle.current.visible = false;
-            }
-        }
-    }
-
-    renderer.current.render(scene.current, camera.current);
-}
-
-return null;
+    scene.remove(tap);
+  }
 };
 
-export default ARScene;
+// Add event listener for tap event
+window.addEventListener('click', handleTap);
+
+// Render loop
+function animate() {
+  requestAnimationFrame(animate);
+
+  if (!isStagnant) {
+    // Move the sphere with the camera
+    sphere.position.copy(camera.position);
+    sphere.position.z -= 0.5; // Adjust the distance from the camera
+  }
+
+  renderer.render(scene, camera);
+}
+
+animate();
